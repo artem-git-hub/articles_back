@@ -1,43 +1,12 @@
 import json
-from fastapi import APIRouter
+from fastapi import APIRouter, Path
 from fastapi.responses import JSONResponse
 from typing import List
 
-from db.iteraction.template import add_template, select_all_templates
+from db.iteraction.template import add_template, select_all_templates, select_process_by_code
 from api.serializers.template import Template
 
 router = APIRouter(prefix='', tags=['template'])
-
-database_data = [
-    {
-        'name': 'name1',
-        'code': 'code1',
-        'data': {
-            'title': {
-                'column': '3/7',
-                'row': '2/5'
-            },
-            'subtitle': {
-                'column': '2/5',
-                'row': '2/5',
-            }
-        }
-    },
-    {
-        'name': 'name2',
-        'code': 'code2',
-        'data': {
-            'title': {
-                'column': '3/7',
-                'row': '2/5'
-            },
-            'subtitle': {
-                'column': '2/5',
-                'row': '2/5',
-            }
-        }
-    },
-]
 
 @router.get("/api/templates/", response_model=List[Template])
 async def get_templates():
@@ -57,6 +26,25 @@ async def get_templates():
         return JSONResponse(content=templates_data)
     except Exception as e:
         return JSONResponse(content={"success": False, "error": e})
+
+@router.get("/api/template/{code}", response_model=Template)
+async def get_template_by_code(code: str = Path(..., title="Code of the template")) -> Template:
+    try:
+        template = select_process_by_code(code)
+
+        if not template:
+            raise HTTPException(status_code=404, detail="Template not found")
+
+        template_data = {
+            "name": template.name,
+            "code": template.code,
+            "data": template.data
+        }
+
+        return JSONResponse(content=template_data)
+    except Exception as e:
+        return JSONResponse(content={"success": False, "error": str(e)})
+    
 
 @router.post("/api/template/")
 async def create_template(template_data: Template) -> JSONResponse:
